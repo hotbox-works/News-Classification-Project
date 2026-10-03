@@ -79,11 +79,17 @@ Our notebook file sets up and uses CUDA automatically when it's available otherw
 1. Select **Kernel → Restart & Run All**. Run the whole notebook from the top in a fresh kernel because all the later parts depend on objects created in the earlier cells such as for Parts 4 and 5, they use the frozen Part 3 models and the Data A vectorizer that are kept in memory.
 2. The third code cell prints `DEVICE: cuda` if the GPU is being used and `DEVICE: cpu` otherwise.
 3. Results are in this order:
+
 Part 1: Explore Data A: Class counts, missing, empty and duplicate checks, length box plots, example articles, then common title openings
+
 Part 2: In-domain baseline: Validation training curves, refit on all of Data A train, Data A test metrics and confusion matrices, and then error analysis
+
 Part 3: Regularization and Data B: Validation sweep on 4 LR and 4 MLP settings, selected models, Data A and Data B test metrics, per-class tables, confusion matrices, post hoc results for all settings, and then a Data A vs Data B comparison
+
 Part 4: Transfer to Data C: Shared-labels 2–4 and label-1 metrics, label-5 rate, confusion matrices, World error samples, vocabulary-gap table, and then in-domain Data C reference models
+
 Part 5: Limited Data C examples: Results for every budget and sampling strategy, label-1 F1 and Data C macro-F1 plots, and retained Data A and Data B performance plots
+
 Selected component: Unigram & bigram TF-IDF: validation sweep, Data A and Data B test results, per-class comparison, confusion matrices, repeated Part 5 experiments, and then comparison plots against unigram
 
 ## Reproducibility
