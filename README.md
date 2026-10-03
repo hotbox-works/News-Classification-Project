@@ -26,7 +26,7 @@ pip install -r requirements.txt
 jupyter notebook project1_full.ipynb
 ```
 
-Skip the first cell, since it only works in Colab. Then run the rest of the cells in order. The notebook runs on CPU, but it's a lot slower without a GPU.
+The notebook runs on CPU, but it's a lot slower without a GPU.
 
 ## Reproducibility
 
