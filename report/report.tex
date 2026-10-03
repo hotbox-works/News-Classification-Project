@@ -58,7 +58,7 @@ The total number of examples before data cleaning was about 7500. After dropping
 Duplicate examples could give more weight to certain examples on accident while null examples can confuse the model by taking in a Title or Description instead of both. 
 For this project, each token consists of exactly one word. The description and title are split according to spaces to account for this. We calculated the distributions of both the Title and Description using Matplotlib's boxplot functions. 
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=12cm,trim={0 0 0 0},clip]{fig_token_length_dist.png}
   \caption{Token Length Distribution Comparison}
@@ -136,7 +136,7 @@ Both models were trained using SGD with a batch size of 32 and cross-entropy los
 %LR continued improving through its maximum of $50$ epochs, whereas the MLP achieved its best validation loss at epoch $11$.
 After these decisions were fixed, the vectorizer was refit on all $7,500$ examples in the Dataset A training set, and both models were re-trained using their selected training durations before a single evaluation on the 2,500-example Dataset A test set.
 
-\begin{table*}
+\begin{table*}[H]
   \center
   \caption{Initial Configurations for LR and MLP}
   \label{table:lr_mlp_architectures}
@@ -150,7 +150,7 @@ After these decisions were fixed, the vectorizer was refit on all $7,500$ exampl
   \end{tabular}
 \end{table*}
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Average In-Domain Performances of LR and MLP on Test Dataset A}
   \label{table:lr_mlp_performance_on_tdsa}
@@ -168,7 +168,7 @@ Table \ref{table:lr_mlp_performance_on_tdsa} shows that the MLP achieved an accu
 The increase in both metrics suggests that the MLP achieved better overall predictive performance as well as improved average class-wise performance.
 Because macro-F1 accounts for equal importance to each class, its improvement cannot be attributed simply to better performance on a more frequent class. Furthermore, each class contains exactly $500$ examples in the Dataset A test set, consistent with the balanced class distribution identified during the analysis in Section \ref{section:eda}.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Per-class Performances of LR and MLP on Test Dataset A}
   \label{table:lr_mlp_per_class_performance_on_tdsa}
@@ -193,7 +193,7 @@ Because macro-F1 accounts for equal importance to each class, its improvement ca
 Nonetheless, as shown in Table \ref{table:lr_mlp_per_class_performance_on_tdsa}, the improvement is not uniform across all classes. The MLP increases the F1 score for Sports from $0.5882$ to $0.6678$, Business from $0.5112$ to $0.5617$ and Technology from $0.6156$ to $0.6777$. By contrast, Politics decreases form $0.4100$ to $0.3660$ and Entertainment from $0.4606$ to $0.4142$.
 The largest improvement occurs for Sports, where recall increases from $0.5700$ to $0.6960$. In contrast, the decrease in Politics F1 is largely associated with its lower recall of $0.3100$ under the MLP. These results indicate that the additional nonlinear capacity of the MLP benefits some categories but fails to identify the lexical ambiguity present across all classes.
 
-\begin{figure*}[h]
+\begin{figure*}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_cm_on_dsa.png}
   \caption{Confusion matrices on Test Dataset A}
@@ -215,7 +215,7 @@ To implement a fully functional logistic regression model, we had to test which 
 For the MLP and LR models there were regularization settings we wanted to experiment with such as the weight decay and dropout layers.
 With the settings in mind, we compared the F1 scores of the parameter adjustments we made for both LR and MLP models on validation data A.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Regularization Configurations for LR and MLP}
   \label{table:lr_mlp_regularization_configs}
@@ -235,7 +235,7 @@ With the settings in mind, we compared the F1 scores of the parameter adjustment
   \end{tabular}
 \end{table*}
 
-\begin{figure*}[h]
+\begin{figure*}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_variants_validation.png}
   \caption{Confusion matrices on Test Dataset A}
@@ -245,7 +245,7 @@ Note that the patience parameter makes it, so a few graphs don't show the macro-
 With these conclusions, we decided to select the \texttt{mlp\_dropout} and \texttt{lr\_wdle-5} models for the rest of the experiment.
 After validating which parameters worked best, we then refitted \texttt{mlp\_dropout} and \texttt{lr\_wdle5} to learn from training data A. There was a significant decrease in accuracy and macro-F1 score for Dataset A train set where the LR model had $0.5648$ and $0.5647$ respectively and the MLP model had $0.5784$ and $0.5748$. As for the Dataset B test set, the LR model achieved a $0.78$ accuracy and $0.78$ macro-F1, while the MLP model achieved a $0.79$ for accuracy and a $0.79$ for macro-F1. The model performed much better on Dataset B compared to Dataset A.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Macro-F1 Scores per Model}
   \label{table:lr_mlp_macrof1_per_settings}
@@ -267,7 +267,7 @@ After validating which parameters worked best, we then refitted \texttt{mlp\_dro
 
 We also checked to see if the other model settings could produce a better macro-F1 score It turned out that the MLP settings we chose had a $10\%$ worse macro-F1 score than the \texttt{mlp\_none} settings on dataset B. It's possible that the settings we chose work best with certain types of data. For example, the best LR model for B according to micro-F1 happened to not be the best LR model for A.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Accuracies and Macro-F1 Scores of the Best Models}
   \label{table:lr_mlp_best_accu_macrof1}
@@ -285,7 +285,7 @@ After selecting settings using only Dataset A's validation macro-F1, we refitted
 Both classifiers performed substantially better on Dataset B than on Dataset A test. Logistic regression increased from $0.5647$ macro-F1 on Dataset A to $0.7888$ on Dataset B. The MLP increased from $0.5749$ to $0.7941$ macro-F1. The MLP performed slightly better than logistic regression on both Dataset A and Dataset B, although the difference was small.
 We then tried to compare performance according to the classes that were determined. Table \ref{table:lr_mlp_a_and_b_f1_precision_recall} were the results.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Accuracies and Macro-F1 Scores of the Best Models}
   \label{table:lr_mlp_a_and_b_f1_precision_recall}
@@ -307,7 +307,7 @@ We then tried to compare performance according to the classes that were determin
   \end{tabular}
 \end{table*}
 
-\begin{figure*}[h]
+\begin{figure*}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_part3_cm.png}
   \caption{Confusion matrices on Test Dataset A}
@@ -319,7 +319,7 @@ When comparing regularization settings, there didn't seem to be much change. For
 As for the MLP, the moderate dropout model achieved a Data B macro-F1 of $0.7941$. However, the MLP without regularization achieved a higher Dataset B macro-F1 of $0.823$. Then adding dropout and L2 weight decay reduce Dataset B's macro-F1 to $0.7797$ while strong dropout and stronger L2 regularization reduced the macro-F1 to $0.7349$. Therefore, the results don't support the idea that stronger regularization improves the transfer to the Dataset B test set and Dataset A test set. 
 Table \ref{table:final_config_for_lr_mlp} shows the final LR and MLP models that were chosen since they both achieved the highest macro-F1.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Final Configurations for LR and MLP}
   \label{table:final_config_for_lr_mlp}
@@ -341,13 +341,13 @@ For the labels, sports, business, and technology mean the same thing in Data A a
 
 If we compare this to Data B, the shared label transfer to Data C is weaker than Data B in part 3 which had a macro-F1 of 0.79. It was also interesting to see that categories with the same meaning still lost accuracy as the source and writing style changed.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_a_to_c.png}
   \caption{Confusion matrices on Test Dataset A}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_c_to_c.png}
   \caption{Confusion matrices on Test Dataset A}
@@ -357,7 +357,7 @@ Comparing Data A and Data C, the semantic transfer of label 1 changed from Polit
 Label 5 doesn't exist in Data C, so every prediction for that label is wrong. LR made that error for 139 articles and MLP did that for 110 articles. Often it pushed articles about culture, religion, and other stories into entertainment. LR and MLP misclassifications of World articles fell into six groups: foreign conflict and politics, sports/noise, international economics, disasters and society, culture and religion, and a single example of a misclassified tech article. The most common words absent from Data A that led to missed classifications primarily came from terminology about countries like EU, India, and Nigeria or economic terms like prices and crude oil, as well as some international sports terminologies like Olympics and games. This highlights that Data A primarily had articles on US based politics rather than international politics. We also noticed that terms like "afp" and "quot" showed formatting differences between the datasets.
 As an in-domain reference, our models were trained on Data C with the same Part 3 settings of an 80/20 split of the data, TF-IDF vectorizer on 17303 terms rather than the original 19834 terms, and early epoch stopping on the macro-F1 validations. These models were trained on Data C testing set and as a result never predicted label 5 as they were never exposed to that label in training. This change allowed us to see the true impact of changing label 1 from Politics to World resulting in a F1 of 0.379 for LR and 0.388 for MLP.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Per-class Performances of LR and MLP on Test Dataset A}
   \label{table:lr_mlp_tran_ref_metrics}
@@ -382,7 +382,7 @@ We can conclude from Part 4 that because LR and MLP stay within a few points of 
 In this part, we started from the final Part $3$ models and added a limited number of Data C training articles to see how much a small amount of target-domain data helps. Both models kept the settings selected in Part $3$, which were chosen without any Data C test results. Logistic regression used a learning rate of $0.01$ and weight decay of $1e-5$ for $6$ epochs. The MLP used a learning rate of $0.001$, no weight decay, and dropout of $0.2$ and $0.3$ for $2$ epochs. Both models used Adam with a batch size of $64$, unigram TF-IDF features on the title and description, and random seed $0$. Every added article came from the Dataset C train set. The Data C test set was only used for evaluation.
 We tested budgets of $50$, $150$, $600$, and $1,500$ added articles with three sampling strategies. The label $1$ only strategy adds Data C World articles. The shared labels only strategy adds Sports, Business, and Technology articles, split as evenly as possible, so a budget of $1,500$ adds $500$ from each class. The balanced strategy adds about the same number from all four classes, which gives $375$ per class at $1,500$. To make the sampling reproducible, each Data C class was shuffled once with seed $0$, and every sample takes the first $n$ articles from each shuffled class. Because of this, a smaller sample is always contained in a larger one. For every condition, we refit the TF-IDF vectorizer and the classifier on Data A train plus the sampled Data C articles, so the training set grew from $7,500$ articles to as many as $9,000$. The zero-example baseline is the frozen Part $3$ model, and it was run once per model.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Logistic Regression Results by Strategy and Budget}
   \label{table:lr_strategy_budget}
@@ -407,7 +407,7 @@ We tested budgets of $50$, $150$, $600$, and $1,500$ added articles with three s
   \end{tabular}
 \end{table*}
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{MLP Results by Strategy and Budget}
   \label{table:mlp_strategy_budget}
@@ -432,13 +432,13 @@ We tested budgets of $50$, $150$, $600$, and $1,500$ added articles with three s
   \end{tabular}
 \end{table*}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_pt4_world_and_others.png}
   \caption{Data C label-1 (World) F1 and Data C macro-F1 as Data C training examples are added, for logistic regression (top) and the MLP (bottom).}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_pt4_retained.png}
   \caption{Data A test macro-F1 (solid) and Data B test macro-F1 (dashed) as Data C training examples are added, for logistic regression (left) and the MLP (right).}
@@ -455,7 +455,7 @@ All $24$ adapted models passed the $40\%$ macro-F1 requirement on Data C. The lo
 
 In the previous sections, we analyzed the performance of different models using datasets represented with unigram TF-IDF features. In this section, we extend the text representation by using bigrams in addition to unigrams and examine how the resulting increase in feature dimensionality affects model performance. The experiments are designed to answer the following questions: (a) How do the models respond to the increased feature dimensionality introduced by bigram features? (b) Does the unigram--bigram representation improve both in-domain performance and cross-dataset transfer compared with the unigram baseline? and (c) Does the extended representation improve model adaptation to Dataset C when limited target-domain training examples are added?
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Vocabulary Sizes in Different Text Representation Policy}
   \label{table:feature_sizes_uni_bigrams}
@@ -476,7 +476,7 @@ Note that the extension changes only the text representation; the data splits, r
 
 We first compare the extended models with their unigram counterparts on Datasets A and B to examine in-domain and cross-source performance. We then repeat the limited-data adaptation experiments on Dataset C to determine whether the additional phrase-level features improve adaptation under World-only, shared-label-only, and balanced sampling strategies.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Vocabulary Sizes in Different Text Representation Policy}
   \label{table:feature_sizes_uni_bigrams}
@@ -494,7 +494,7 @@ We first compare the extended models with their unigram counterparts on Datasets
 
 On Dataset A test set, LR macro-F1 increases from $0.5647$ to $0.5667$, while MLP macro-F1 decreases from $0.5749$ to $0.5715$. The cross-source Dataset B results are more informative. LR macro-F1 falls from $0.788$ to $0.7255$ ($-0.0633$), whereas the MLP increases slightly from $0.7941$ to $0.7988$ ($+0.0047$). Therefore, the larger feature space does not necessarily produce a consistent transfer across different models.
 
-\begin{table*}
+\begin{table*}[H]
   \centering
   \caption{Vocabulary Sizes in Different Text Representation Policy}
   \label{table:lr_mlp_extension_perclass_performance}
@@ -518,7 +518,7 @@ On Dataset A test set, LR macro-F1 increases from $0.5647$ to $0.5667$, while ML
 
 The class-wise results further illustrate this difference. In Table \ref{table:lr_mlp_extension_perclass_performance}, F1 score of LR decreases fro all five classes after adding bigrams, with the largest reduction occurring for Technology ($0.777 \to 0.669$). For the MLP, Politics improves from $0.6094$ to $0.686$ and Entertainment changes only slightly from $0.884$ to $0.886$, while Sports, Business and Technology decline. These changes suggest that proximity-token features can be informative for particular categories without being uniformly transferable across the full label set.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_cm.png}
   \caption{Confusion matrices on Test Dataset A}
@@ -526,7 +526,7 @@ The class-wise results further illustrate this difference. In Table \ref{table:l
 
 The confusion matrices provide a concrete explanation for the mixed transfer effects. The extended LR produces additional false Business predictions on Dataset B, including Politics--Business, Sports--Business, and Technology--Business errors. This is consistent with the possibility that some two-word pairs associated with Business in Dataset A are also present in other categories from Dataset B. In contrast, the MLP can combine unigram and bigram evidence nonlinearly and obtains a small improvement, although that improvement is not shared by every class. The extension therefore changes the error structure rather than simply increasing or decreasing performance uniformly.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_f1s.png}
   \caption{Confusion matrices on Test Dataset A}
