@@ -47,8 +47,9 @@
 
 \section{Introduction}
 
-In this work, we investigate the generalization and adaptation behavior of a custom multilayer perceptron (MLP) for multiclass news classification using TF-IDF text representations. We evaluate the model under three settings: in-domain classification on Dataset A, cross-source transfer from Dataset A to Dataset B, and semantic transfer from Dataset A to Dataset C, where the definition of one class changes from Politics to the broader World category. We further examine how different regularization settings and limited amounts of Dataset C training data affect classification performance across these conditions.  
-In addition, we study whether changing the text representation improves transfer and adaptation. The original model uses unigram TF-IDF features, while the extended representation includes both unigrams and bigrams, resulting in a larger feature dimensionality. By comparing these representations across the transfer and adaptation experiments, we aim to determine whether additional phrase-level information improves generalization and maintain consistency across datasets.
+In this project, we wanted to classify news articles from multiple sources using multiple datasets into one of five topics: Politics, Sports, Business, Technology, or Entertainment. We trained models using Data A and evaluated whether models trained on one news source could generalize to both unseen Data A articles and Data B articles. We also studied how regularization affected performance and later examined what happens when the classes change in Data C. 
+Since machine-learning classifiers require numerical input rather than raw text, we represented each news article using term frequency inverse document frequency (TF-IDF) features. For each example we concatenated the article title and description the converted the text into a unigram TF-IDF vector. TF-IDF gives greater weight to words that are important in a specific article but less common across all articles. This allows the models to use words that are related to the article specifically while reducing the impact of common words across multiple articles. 
+We compared two models which were logistic regression (LR) and multi-layer perceptron (MLP. LR provides a linear baseline that predicts a topic from a weighted combination of TF-IDF features. The MLP uses two hidden layers with ReLU activation functions which allow it to learn nonlinear relationships. We selected regularization settings using a validation split from Data A only then refit the selected models on all available Data A training data. Then Data A and B were used for model selection and training.
 
 \section{Part 1: Exploratory Data Analysis}\label{section:eda}
 
@@ -57,10 +58,10 @@ The total number of examples before data cleaning was about 7500. After dropping
 Duplicate examples could give more weight to certain examples on accident while null examples can confuse the model by taking in a Title or Description instead of both. 
 For this project, each token consists of exactly one word. The description and title are split according to spaces to account for this. We calculated the distributions of both the Title and Description using Matplotlib's boxplot functions. 
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=12cm,trim={0 0 0 0},clip]{fig_token_length_dist.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Token Length Distribution Comparison}
 \end{figure}
 
 With some observation, the median token length for a Title is about 10 and the median token length for a Description is around 20. It's logical for a Title to have less words than a Description. As for the range of values, the Title could range from 1 to 25 while a Description could range from 1 to around 160. Clearly the Description takes on 5 times the values as the Title which could make the model more favorable towards Descriptions since there's also 5 times the data for the model to work with. The Title length distribution is roughly symmetrical while the Description distribution is mainly left skewed.
@@ -118,7 +119,7 @@ Below are some representative examples from each class:
 \end{enumerate}
 
 Then we also wanted to check to see if there was any vocabulary in the data that could made the model predict the classes incorrectly. 
-I noticed that there was a Star Wars example classified as Technology when there were phrases mentioned like "BB-8" and droid. The Star Wars example should have been classified as Entertainment and the model may use the incorrect data to classify most Star Wars-related examples as Entertainment.
+We noticed that there was a Star Wars example classified as Technology when there were phrases mentioned like "BB-8" and droid. The Star Wars example should have been classified as Entertainment and the model may use the incorrect data to classify most Star Wars-related examples as Entertainment.
 There are also some words that have multiple meanings. For example, a bank could refer to the area near a river, or it could mean a place where people deposit money into. The model may get confused with certain important words and classify the examples incorrectly.
 
 \section{Part 2: In-Domain Performance on Dataset A}
@@ -137,21 +138,21 @@ After these decisions were fixed, the vectorizer was refit on all $7,500$ exampl
 
 \begin{table*}[h]
   \center
-  \caption{Model Configuration}
+  \caption{Initial Configurations for LR and MLP}
   \label{table:lr_mlp_architectures}
   \begin{tabular}{lccccc}
     \hline
     \textbf{Model} & \textbf{Architecture} & \textbf{Optimizer} & \textbf{Regularization} & \textbf{Epochs} & \textbf{Vocab. Size} \\
     \hline
     LR & Single Linear & SGD & None & 50 & 19,834 \\
-    MLP & $128 \to 64$ with ReLU & SGD & Dropout 0.2/0.3; weight decay 1e-3 & 11 & 19,834\\
+    MLP & $128 \to 64$ with ReLU & SGD & Dropout 0.2/0.3; $\mathcal{L}2=10^{-3}$ & 11 & 19,834\\
     \hline
   \end{tabular}
 \end{table*}
 
 \begin{table*}[h]
   \centering
-  \caption{Mean In-Domain Performances of LR and MLP on Test Dataset A}
+  \caption{Average In-Domain Performances of LR and MLP on Test Dataset A}
   \label{table:lr_mlp_performance_on_tdsa}
   \begin{tabular}{lcc}
     \hline
@@ -379,8 +380,78 @@ As an in-domain reference, our models were trained on Data C with the same Part 
 Table \ref{table:lr_mlp_tran_ref_metrics} shows the results of the reference models on Data C testing set comparing whether it was trained on the Data A training set or the Data C training set. From this data, we can see that World F1 scores grew by 11 points  for LR and 15 points for MLP showing our estimated tradeoff for Politics and World mismatches in the data. However, there are still challenges with labelling World articles as the topic in Data C is so broad that many of the other articles have overlapping terminology.
 We can conclude from Part 4 that because LR and MLP stay within a few points of each other in every comparison, the nonlinear model doesn't help with category boundaries which makes sense as it hadn't seen that specific category during training.
 
-
 \section{Part 5: Limited-Data Adaptation to Dataset C}
+
+In this part, we started from the final Part $3$ models and added a limited number of Data C training articles to see how much a small amount of target-domain data helps. Both models kept the settings selected in Part $3$, which were chosen without any Data C test results. Logistic regression used a learning rate of $0.01$ and weight decay of $1e-5$ for $6$ epochs. The MLP used a learning rate of $0.001$, no weight decay, and dropout of $0.2$ and $0.3$ for $2$ epochs. Both models used Adam with a batch size of $64$, unigram TF-IDF features on the title and description, and random seed $0$. Every added article came from the Dataset C train set. The Data C test set was only used for evaluation.
+We tested budgets of $50$, $150$, $600$, and $1,500$ added articles with three sampling strategies. The label $1$ only strategy adds Data C World articles. The shared labels only strategy adds Sports, Business, and Technology articles, split as evenly as possible, so a budget of $1,500$ adds $500$ from each class. The balanced strategy adds about the same number from all four classes, which gives $375$ per class at $1,500$. To make the sampling reproducible, each Data C class was shuffled once with seed $0$, and every sample takes the first $n$ articles from each shuffled class. Because of this, a smaller sample is always contained in a larger one. For every condition, we refit the TF-IDF vectorizer and the classifier on Data A train plus the sampled Data C articles, so the training set grew from $7,500$ articles to as many as $9,000$. The zero-example baseline is the frozen Part $3$ model, and it was run once per model.
+
+\begin{table*}[h]
+  \centering
+  \caption{Logistic Regression Results by Strategy and Budget}
+  \label{table:lr_strategy_budget}
+  \begin{tabular}{lccccccc}
+    \hline
+    \textbf{Strategy} & \textbf{Added} & \textbf{C label-1 recall} & \textbf{C label-1 F1} & \textbf{C macro-F1 (1--4)} & \textbf{C strict macro-F1 (2--4)} & \textbf{A test macro-F1} & \textbf{B test macro-F1}\\
+    \hline
+    Baseline    & $0$     & $0.430$ & $0.498$ & $0.561$ & $0.582$ & $0.565$ & $0.789$\\
+    Label 1 only & $50$    & $0.552$ & $0.541$ & $0.566$ & $0.574$ & $0.562$ & $0.801$\\
+    Label 1 only & $150$   & $0.630$ & $0.551$ & $0.561$ & $0.564$ & $0.559$ & $0.806$\\
+    Label 1 only & $600$   & $0.714$ & $0.554$ & $0.545$ & $0.542$ & $0.551$ & $0.818$\\
+    Label 1 only & $1,500$ & $0.758$ & $0.540$ & $0.530$ & $0.526$ & $0.549$ & $0.797$\\
+    Shared only  & $50$    & $0.408$ & $0.490$ & $0.555$ & $0.577$ & $0.566$ & $0.797$\\
+    Shared only  & $150$   & $0.370$ & $0.463$ & $0.553$ & $0.583$ & $0.567$ & $0.803$\\
+    Shared only  & $600$   & $0.306$ & $0.420$ & $0.568$ & $0.617$ & $0.569$ & $0.811$\\
+    Shared only  & $1,500$ & $0.246$ & $0.363$ & $0.561$ & $0.627$ & $0.575$ & $0.806$\\
+    Balanced     & $50$    & $0.460$ & $0.517$ & $0.558$ & $0.572$ & $0.565$ & $0.799$\\
+    Balanced     & $150$   & $0.500$ & $0.548$ & $0.579$ & $0.589$ & $0.566$ & $0.805$\\
+    Balanced     & $600$   & $0.544$ & $0.581$ & $0.611$ & $0.621$ & $0.571$ & $0.830$\\
+    Balanced     & $1,500$ & $0.548$ & $0.584$ & $0.620$ & $0.632$ & $0.570$ & $0.855$\\
+    \hline
+  \end{tabular}
+\end{table*}
+
+\begin{table*}[h]
+  \centering
+  \caption{MLP Results by Strategy and Budget}
+  \label{table:mlp_strategy_budget}
+  \begin{tabular}{lccccccc}
+    \hline
+    \textbf{Strategy} & \textbf{Added} & \textbf{C label-1 recall} & \textbf{C label-1 F1} & \textbf{C macro-F1 (1--4)} & \textbf{C strict macro-F1 (2--4)} & \textbf{A test macro-F1} & \textbf{B test macro-F1}\\
+    \hline
+    Baseline     & $0$     & $0.392$ & $0.476$ & $0.560$ & $0.588$ & $0.575$ & $0.794$\\
+    Label 1 only & $50$    & $0.556$ & $0.541$ & $0.570$ & $0.579$ & $0.570$ & $0.838$\\
+    Label 1 only & $150$   & $0.584$ & $0.544$ & $0.543$ & $0.543$ & $0.578$ & $0.769$\\
+    Label 1 only & $600$   & $0.716$ & $0.559$ & $0.553$ & $0.551$ & $0.561$ & $0.840$\\
+    Label 1 only & $1,500$ & $0.742$ & $0.559$ & $0.517$ & $0.503$ & $0.565$ & $0.788$\\
+    Shared only  & $50$    & $0.424$ & $0.499$ & $0.578$ & $0.604$ & $0.570$ & $0.825$\\
+    Shared only  & $150$   & $0.354$ & $0.452$ & $0.557$ & $0.592$ & $0.565$ & $0.809$\\
+    Shared only  & $600$   & $0.354$ & $0.460$ & $0.576$ & $0.615$ & $0.567$ & $0.833$\\
+    Shared only  & $1,500$ & $0.252$ & $0.368$ & $0.569$ & $0.636$ & $0.572$ & $0.818$\\
+    Balanced     & $50$    & $0.430$ & $0.504$ & $0.565$ & $0.586$ & $0.584$ & $0.829$\\
+    Balanced     & $150$   & $0.482$ & $0.540$ & $0.592$ & $0.610$ & $0.576$ & $0.806$\\
+    Balanced     & $600$   & $0.544$ & $0.580$ & $0.610$ & $0.620$ & $0.574$ & $0.841$\\
+    Balanced     & $1,500$ & $0.526$ & $0.581$ & $0.623$ & $0.637$ & $0.586$ & $0.858$\\
+    \hline
+  \end{tabular}
+\end{table*}
+
+As shown in Tables \ref{table:lr_strategy_budget} and \ref{table:mlp_strategy_budget}, the balanced strategy gave the best balance between improving on Data C and keeping performance on the original data. It was the only strategy where Data C macro-F1 kept going up with every budget. At $1,500$ added articles, logistic regression went from $0.561$ to $0.620$ and the MLP went from $0.560$ to $0.623$. These scores come close to the in-domain reference models from Part $4$, which reached $0.632$ for LR and $0.641$ for the MLP after training on $4,800$ Data C articles. Data A macro-F1 stayed within about a point of the baseline for both models, and Data B improved, rising from $0.789$ to $0.855$ for LR and from $0.794$ to $0.858$ for the MLP.
+Adding only World articles raised World recall by a lot. LR recall went from $0.430$ to $0.758$ and MLP recall went from $0.392$ to $0.742$. World F1 only rose to about $0.54$ to $0.56$, though, because precision dropped as the models started labeling many Sports, Business, and Technology articles as World. By $1,500$ articles, overall Data C macro-F1 fell below the baseline to $0.530$ for LR and $0.517$ for the MLP, and strict macro-F1 on labels $2$ to $4$ dropped as well. The MLP's Data B score was also unstable with this strategy, falling to $0.769$ at $150$ articles before recovering.
+The shared labels only strategy had the opposite problem. It gave the highest strict macro-F1 on labels $2$ to $4$ at most budgets, reaching $0.627$ for LR and $0.636$ for the MLP at $1,500$. World performance got worse with every budget, though. World recall fell to about $0.25$ for both models, and World F1 dropped to $0.363$ for LR and $0.368$ for the MLP. Since the models saw more examples of the other three classes and none of World, they had even less reason to predict World than before. Overall Data C macro-F1 barely changed from the baseline.
+These results show that label-$1$ examples are necessary. Without them, the models got worse at recognizing World articles, which is the main source of error when moving from Data A to Data C. World examples alone are not enough either, since they teach the model what World looks like without showing where it ends. Balanced contrast examples help the model separate World from Sports, Business, and Technology. At $1,500$ articles, the balanced strategy reached a higher World F1 than the label $1$ only strategy for both models, even though it added only $375$ World articles instead of $1,500$. It also matched the strict macro-F1 of the shared labels only strategy, with $0.632$ compared to $0.627$ for LR and $0.637$ compared to $0.636$ for the MLP. The balanced models improved on World and the shared labels at the same time, which neither of the other strategies managed.
+All $24$ adapted models passed the $40\%$ macro-F1 requirement on Data C. The lowest was the MLP with $1,500$ label $1$ only articles at $0.517$.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_pt4_world_and_others.png}
+  \caption{Data C label-1 (World) F1 and Data C macro-F1 as Data C training examples are added, for logistic regression (top) and the MLP (bottom).}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=12cm,trim={0 0 0 0},clip]{fig_pt4_retained.png}
+  \caption{Data A test macro-F1 (solid) and Data B test macro-F1 (dashed) as Data C training examples are added, for logistic regression (left) and the MLP (right).}
+\end{figure}
 
 \section{Part 6: Text-Representation Extension}
 
