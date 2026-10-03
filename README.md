@@ -79,26 +79,29 @@ Our notebook file sets up and uses CUDA automatically when it's available otherw
 1. Select **Kernel → Restart & Run All**. Run the whole notebook from the top in a fresh kernel because all the later parts depend on objects created in the earlier cells such as for Parts 4 and 5, they use the frozen Part 3 models and the Data A vectorizer that are kept in memory.
 2. The third code cell prints `DEVICE: cuda` if the GPU is being used and `DEVICE: cpu` otherwise.
 3. Results are in this order:
+- Part 1: Explore Data A: Class counts, missing, empty and duplicate checks, length box plots, example articles, then common title openings
 
-Part 1: Explore Data A: Class counts, missing, empty and duplicate checks, length box plots, example articles, then common title openings
+- Part 2: In-domain baseline: Validation training curves, refit on all of Data A train, Data A test metrics and confusion matrices, and then error analysis
 
-Part 2: In-domain baseline: Validation training curves, refit on all of Data A train, Data A test metrics and confusion matrices, and then error analysis
+- Part 3: Regularization and Data B: Validation sweep on 4 LR and 4 MLP settings, selected models, Data A and Data B test metrics, per-class tables, confusion matrices, post hoc results for all settings, and then a Data A vs Data B comparison
 
-Part 3: Regularization and Data B: Validation sweep on 4 LR and 4 MLP settings, selected models, Data A and Data B test metrics, per-class tables, confusion matrices, post hoc results for all settings, and then a Data A vs Data B comparison
+- Part 4: Transfer to Data C: Shared-labels 2–4 and label-1 metrics, label-5 rate, confusion matrices, World error samples, vocabulary-gap table, and then in-domain Data C reference models
 
-Part 4: Transfer to Data C: Shared-labels 2–4 and label-1 metrics, label-5 rate, confusion matrices, World error samples, vocabulary-gap table, and then in-domain Data C reference models
+- Part 5: Limited Data C examples: Results for every budget and sampling strategy, label-1 F1 and Data C macro-F1 plots, and retained Data A and Data B performance plots
 
-Part 5: Limited Data C examples: Results for every budget and sampling strategy, label-1 F1 and Data C macro-F1 plots, and retained Data A and Data B performance plots
-
-Selected component: Unigram & bigram TF-IDF: validation sweep, Data A and Data B test results, per-class comparison, confusion matrices, repeated Part 5 experiments, and then comparison plots against unigram
+- Selected component: Unigram & bigram TF-IDF: validation sweep, Data A and Data B test results, per-class comparison, confusion matrices, repeated Part 5 experiments, and then comparison plots against unigram
 
 ## Reproducibility
  
-- **Seed:** Every random step uses seed 0. This covers the train and validation splits (`random_state=0`), NumPy and PyTorch (`np.random.seed(0)`, `torch.manual_seed(0)`, `torch.cuda.manual_seed_all(0)`), batch shuffling, the error-analysis samples, and in Part 5 the Data C sampling.
-- **Package versions:** `requirements.txt` has the packages we used. Follow the setup rules we discussed earlier to setup the environment.
-- **GPU vs CPU:** Some GPU operations in PyTorch are not bit-for-bit deterministic, so a rerun on a different GPU or on a CPU, can cause differences in the third or fourth decimal place, however our conclusions in the report don't depend on differences that small so it shouldn't cause any issues.
-- **No test-set tuning:** Every TF-IDF vectorizer is fit only on the training data of the model that uses it. Model selection uses only validation splits made from training data, and Data B is never used for training or fitting.
-- **Model configurations:** The notebook displays a configuration table for every final model, with representation, optimizer, learning rate, weight decay, dropout, batch size, epochs, seed, training-set size and vocabulary size. These same configurations are listed in our report.
+**Seed:** Every random step uses seed 0. This covers the train and validation splits (`random_state=0`), NumPy and PyTorch (`np.random.seed(0)`, `torch.manual_seed(0)`, `torch.cuda.manual_seed_all(0)`), batch shuffling, the error-analysis samples, and in Part 5 the Data C sampling.
+
+**Package versions:** `requirements.txt` has the packages we used. Follow the setup rules we discussed earlier to setup the environment.
+
+**GPU vs CPU:** Some GPU operations in PyTorch are not bit-for-bit deterministic, so a rerun on a different GPU or on a CPU, can cause differences in the third or fourth decimal place, however our conclusions in the report don't depend on differences that small so it shouldn't cause any issues.
+
+**No test-set tuning:** Every TF-IDF vectorizer is fit only on the training data of the model that uses it. Model selection uses only validation splits made from training data, and Data B is never used for training or fitting.
+
+**Model configurations:** The notebook displays a configuration table for every final model, with representation, optimizer, learning rate, weight decay, dropout, batch size, epochs, seed, training-set size and vocabulary size. These same configurations are listed in our report.
 
 ### Results Comparison to Confirm Reproducibility
 
