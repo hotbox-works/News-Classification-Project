@@ -61,7 +61,7 @@ For this project, each token consists of exactly one word. The description and t
 \begin{figure}[h]
   \centering
   \includegraphics[width=12cm,trim={0 0 0 0},clip]{fig_token_length_dist.png}
-  \caption{Token Length Distribution Comparison}
+  \caption{Token Length Distribution for Title and Description fields}
 \end{figure}
 
 With some observation, the median token length for a Title is about 10 and the median token length for a Description is around 20. It's logical for a Title to have less words than a Description. As for the range of values, the Title could range from 1 to 25 while a Description could range from 1 to around 160. Clearly the Description takes on 5 times the values as the Title which could make the model more favorable towards Descriptions since there's also 5 times the data for the model to work with. The Title length distribution is roughly symmetrical while the Description distribution is mainly left skewed.
@@ -196,14 +196,15 @@ The largest improvement occurs for Sports, where recall increases from $0.5700$ 
 \begin{figure*}[h]
   \centering
   \includegraphics[width=0.7\textwidth,trim={0 0 0 0},clip]{fig_lr_mlp_cm_on_dsa.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Confusion matrices of LR and MLP on Dataset A test set}
+  \label{fig:lr_mlp_cm_on_dsa}
 \end{figure*}
 
 From the error analysis, we observe that LR misclassified $1,211$ of $2,500$ test articles, whereas the MLP misclassified $1,134$. A follow-up qualitative inspection of ten representative errors reveals four distinct patterns: Politics--Entertainment overlap, Business--Technology overlap, Sports--Entertainment overlap, and cases in which the description is usually short or poorly correlated to its corresponding category.
 
 %TABULAR: error examples%
 
-The class-wise results further show that the MLP performs most effectively on Sports and Technology, with F1 scores of $0.6678$ and $0.6777$, respectively, whereas Politics and Entertainment remain the most difficult categories.
+The class-wise results in Figure \ref{fig:lr_mlp_cm_on_dsa} further show that the MLP performs most effectively on Sports and Technology, with F1 scores of $0.6678$ and $0.6777$, respectively, whereas Politics and Entertainment remain the most difficult categories.
 This pattern may be explained by overlapping vocabulary among different classes and by articles whose descriptions provide limited additional information about the article's topic.
 For example, company-related articles can contain vocabulary associated with both Business and Technology, while stories involving public figures may contain cues associated with both Politics and Entertainment. These overlaps make the class boundaries difficult to determine using lexical TF-IDF features alone.
 
@@ -238,7 +239,7 @@ With the settings in mind, we compared the F1 scores of the parameter adjustment
 \begin{figure*}[h]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_variants_validation.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Macro-F1 scores of LR and MLP on Dataset A validation set}
 \end{figure*}
 
 Note that the patience parameter makes it, so a few graphs don't show the macro-F1 at certain epochs if there isn't a big enough change in validation macro-F1 score. For the MLP, the \texttt{mlp\_dropout} reached the highest macro-F1 score of $0.804$ while for LR the \texttt{lr\_wd1e-5} model reached the highest macro-F1 score of $0.81$.
@@ -287,7 +288,7 @@ We then tried to compare performance according to the classes that were determin
 
 \begin{table*}[h]
   \centering
-  \caption{Accuracies and Macro-F1 Scores of the Best Models}
+  \caption{Per-class F1, Precision, and Recall Metrics on Dataset A and B}
   \label{table:lr_mlp_a_and_b_f1_precision_recall}
   \begin{tabular}{llcccc}
     \hline
@@ -312,7 +313,7 @@ We then tried to compare performance according to the classes that were determin
 \begin{figure*}[h]
   \centering
   \includegraphics[width=0.8\textwidth,trim={0 0 0 0},clip]{fig_lr_mlp_part3_cm.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Confusion matrices of LR and MLP for Dataset A and B}
 \end{figure*}
 
 Sports did the best for both models. The MLP obtained a macro-F1 of 0.938 on Sports for Data B and LR obtained 0.923. Entertainment and Technology also worked well with both models. Politics remained to be the most difficult category on Data B when it came to F1 and recall.  Then for Business both precision and Data A/B's macro-F1 score were extremely low. This means that the model recognized most Business articles but somehow incorrectly assigned the Business label to articles from other classes.
@@ -346,7 +347,7 @@ If we compare this to Data B, the shared label transfer to Data C is weaker than
 \begin{figure}[h]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_a_to_c.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Confusion matrices of LR and MLP trained on Dataset A}
 \end{figure}
 
 \clearpage
@@ -354,7 +355,7 @@ If we compare this to Data B, the shared label transfer to Data C is weaker than
 \begin{figure}[h]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_c_to_c.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{Confusion matrices of LR and MLP trained on Dataset C}
 \end{figure}
 
 Comparing Data A and Data C, the semantic transfer of label 1 changed from Politics in Data A to the broader category World. LR precision became 0.592, recall became 0.430, and F1 became 0.498. Similarly, MLP precision became 0.607, recall became 0.392, and F1 became 0.476. From the 500 true World articles, LR predicted 215 as label 1 and MLP predicted 196. From the plots, whenever World articles were missed, they were often mistaken as Business. LR also labelled 148 non-world articles as World and MLP did that for 127.
@@ -363,7 +364,7 @@ As an in-domain reference, our models were trained on Data C with the same Part 
 
 \begin{table*}[h]
   \centering
-  \caption{Per-class Performances of LR and MLP on Test Dataset A}
+  \caption{Per-class Performances of LR and MLP on Test Dataset A and C}
   \label{table:lr_mlp_tran_ref_metrics}
   \begin{tabular}{lcccc}
     \hline
@@ -480,7 +481,7 @@ We first compare the extended models with their unigram counterparts on Datasets
 
 \begin{table*}[h]
   \centering
-  \caption{Vocabulary Sizes in Different Text Representation Policy}
+  \caption{Accuracies and macro-F1 scores of Unigram/Bigram LR and MLP on Dataset A and B}
   \label{table:feature_sizes_uni_bigrams}
   \begin{tabular}{lcccc}
     \hline
@@ -498,7 +499,7 @@ On Dataset A test set, LR macro-F1 increases from $0.5647$ to $0.5667$, while ML
 
 \begin{table*}[h]
   \centering
-  \caption{Vocabulary Sizes in Different Text Representation Policy}
+  \caption{Per-class Precision, Recall, and F1 scores of Bigram LR and MLP on Dataset A and B}
   \label{table:lr_mlp_extension_perclass_performance}
   \begin{tabular}{llcccccc}
     \hline
@@ -509,11 +510,11 @@ On Dataset A test set, LR macro-F1 increases from $0.5647$ to $0.5667$, while ML
     Bigram LR & Business & $.582$ & $.554$ & $.568$ & $.459$ & $.990$ & $.627$\\
     Bigram LR & Technology & $.676$ & $.688$ & $.682$ & $.976$ & $.509$ & $.669$\\
     Bigram LR & Entertainment & $.533$ & $.528$ & $.531$ & $.976$ & $.723$ & $.830$\\
-    MLP LR & Politics & $.388$ & $.384$ & $.386$ & $.934$ & $.542$ & $.686$\\
-    MLP LR & Sports & $.673$ & $.686$ & $.679$ & $.978$ & $.885$ & $.929$\\
-    MLP LR & Business & $.577$ & $.548$ & $.562$ & $.546$ & $.984$ & $.703$\\
-    MLP LR & Technology & $.673$ & $.680$ & $.677$ & $.968$ & $.668$ & $.791$\\
-    MLP LR & Entertainment & $.546$ & $.562$ & $.554$ & $.969$ & $.816$ & $.886$\\
+    Bigram MLP & Politics & $.388$ & $.384$ & $.386$ & $.934$ & $.542$ & $.686$\\
+    Bigram MLP & Sports & $.673$ & $.686$ & $.679$ & $.978$ & $.885$ & $.929$\\
+    Bigram MLP & Business & $.577$ & $.548$ & $.562$ & $.546$ & $.984$ & $.703$\\
+    Bigram MLP & Technology & $.673$ & $.680$ & $.677$ & $.968$ & $.668$ & $.791$\\
+    Bigram MLP & Entertainment & $.546$ & $.562$ & $.554$ & $.969$ & $.816$ & $.886$\\
     \hline  
   \end{tabular}
 \end{table*}
@@ -523,7 +524,7 @@ The class-wise results further illustrate this difference. In Table \ref{table:l
 \begin{figure}[h]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_cm.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{CConfusion matrices of extended LR and MLP on Test Dataset A and B}
 \end{figure}
 
 The confusion matrices provide a concrete explanation for the mixed transfer effects. The extended LR produces additional false Business predictions on Dataset B, including Politics--Business, Sports--Business, and Technology--Business errors. This is consistent with the possibility that some two-word pairs associated with Business in Dataset A are also present in other categories from Dataset B. In contrast, the MLP can combine unigram and bigram evidence nonlinearly and obtains a small improvement, although that improvement is not shared by every class. The extension therefore changes the error structure rather than simply increasing or decreasing performance uniformly.
@@ -533,7 +534,7 @@ The confusion matrices provide a concrete explanation for the mixed transfer eff
 \begin{figure}[h]
   \centering
   \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_f1s.png}
-  \caption{Confusion matrices on Test Dataset A}
+  \caption{LR and MLP Performance under Different Data C Training Strategies and Feature Representations}
 \end{figure}
 
 \section{Conclusion}
