@@ -37,18 +37,18 @@ It is also possible to copy the files over with `scp` or open a terminal on Scho
 Open a terminal on Scholar, either **Clusters → Scholar Shell Access** in the gateway or `ssh <career_account>@scholar.rcac.purdue.edu`, then run this to set it up:
  
 ```bash
-# load conda (run "module avail conda" or "module avail anaconda" if this name isn't found)
+# load conda (try running "module avail conda" or "module avail anaconda" if it says this name isn't found)
 module load conda
  
 # create and activate a fresh environment
 conda create -n aif-project1 python=3.11 -y
 conda activate aif-project1
  
-# install the exact package versions we used
+# install the packages we used
 cd ~/project1
 pip install -r requirements.txt
  
-# register the environment as a Jupyter kernel
+# register this new environment as a Jupyter kernel
 pip install ipykernel
 python -m ipykernel install --user --name aif-project1 --display-name "Python (aif-project1)"
 ```
@@ -90,9 +90,9 @@ Selected component: Unigram & bigram TF-IDF: validation sweep, Data A and Data B
  
 - **Seed:** Every random step uses seed 0. This covers the train and validation splits (`random_state=0`), NumPy and PyTorch (`np.random.seed(0)`, `torch.manual_seed(0)`, `torch.cuda.manual_seed_all(0)`), batch shuffling, the error-analysis samples, and in Part 5 the Data C sampling.
 - **Package versions:** `requirements.txt` has the packages we used. Follow the setup rules we discussed earlier to setup the environment.
-- **GPU vs CPU:** Some GPU operations in PyTorch aren't bit-for-bit deterministic, so a rerun on a different GPU or on a CPU, can cause differences in the third or fourth decimal place, however our conclusions in the report don't depend on differences that small so it shouldn't cause issue.
+- **GPU vs CPU:** Some GPU operations in PyTorch are not bit-for-bit deterministic, so a rerun on a different GPU or on a CPU, can cause differences in the third or fourth decimal place, however our conclusions in the report don't depend on differences that small so it shouldn't cause any issues.
 - **No test-set tuning:** Every TF-IDF vectorizer is fit only on the training data of the model that uses it. Model selection uses only validation splits made from training data, and Data B is never used for training or fitting.
-- **Model configurations:** The notebook displays a configuration table for every final model, with representation, optimizer, learning rate, weight decay, dropout, batch size, epochs, seed, training-set size and vocabulary size. The same configurations are listed in our report.
+- **Model configurations:** The notebook displays a configuration table for every final model, with representation, optimizer, learning rate, weight decay, dropout, batch size, epochs, seed, training-set size and vocabulary size. These same configurations are listed in our report.
 
 ### Results Comparison to Confirm Reproducibility
 
