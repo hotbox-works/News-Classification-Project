@@ -1,10 +1,12 @@
 %\documentclass[conference,compsoc,draftcls]{IEEEtran}
-\documentclass[conference,compsoc]{IEEEtran}
+\documentclass[letterpaper,conference,compsoc,onecolumn]{IEEEtran}
 
 \usepackage[utf8]{inputenc}
 \usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage{url}
+\usepackage{float}
+\usepackage{dblfloatfix}
 \usepackage{graphicx}
 
 \makeatletter
@@ -25,9 +27,7 @@
 
 \begin{document}
 
-\title{
-  Whatever Title Goes Here
-}
+\title{Generalization and Adaptation of MLP for News Classification}
 
 \author{
   \IEEEauthorblockN{
@@ -47,10 +47,423 @@
 
 \section{Introduction}
 
-ping
+In this work, we investigate the generalization and adaptation behavior of a custom multilayer perceptron (MLP) for multiclass news classification using TF-IDF text representations. We evaluate the model under three settings: in-domain classification on Dataset A, cross-source transfer from Dataset A to Dataset B, and semantic transfer from Dataset A to Dataset C, where the definition of one class changes from Politics to the broader World category. We further examine how different regularization settings and limited amounts of Dataset C training data affect classification performance across these conditions.  
+In addition, we study whether changing the text representation improves transfer and adaptation. The original model uses unigram TF-IDF features, while the extended representation includes both unigrams and bigrams, resulting in a larger feature dimensionality. By comparing these representations across the transfer and adaptation experiments, we aim to determine whether additional phrase-level information improves generalization and maintain consistency across datasets.
+
+\section{Part 1: Exploratory Data Analysis}\label{section:eda}
+
+For this part, we wanted to make sure to clean the data. Cleaning the data helps to make sure that the data is accurate for the model to learn and it keeps the model from encountering any errors that may prevent it from correctly learning the model. For this part we only cleaned dataset\_a\_train. 
+The total number of examples before data cleaning was about 7500. After dropping duplicate examples and examples with null values, the data decreased to about 7,453 examples. The 47 examples that were removed all belonged to the class "Technology." Therefore, there were 1500 examples for each class and Technology had about 1,453. 
+Duplicate examples could give more weight to certain examples on accident while null examples can confuse the model by taking in a Title or Description instead of both. 
+For this project, each token consists of exactly one word. The description and title are split according to spaces to account for this. We calculated the distributions of both the Title and Description using Matplotlib's boxplot functions. 
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=12cm,trim={0 0 0 0},clip]{fig_token_length_dist.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure}
+
+With some observation, the median token length for a Title is about 10 and the median token length for a Description is around 20. It's logical for a Title to have less words than a Description. As for the range of values, the Title could range from 1 to 25 while a Description could range from 1 to around 160. Clearly the Description takes on 5 times the values as the Title which could make the model more favorable towards Descriptions since there's also 5 times the data for the model to work with. The Title length distribution is roughly symmetrical while the Description distribution is mainly left skewed.
+
+Below are some representative examples from each class:
+
+\begin{enumerate}
+    \item \textbf{Class 1}: Politics\\
+    \textbf{Title:} Movement Against Juvenile Court Fees Runs Into Resistance\\
+    \textbf{Description:}
+    \begin{quote}
+        \small
+        In almost every state and the District of Columbia, the minors who
+        appear in the roughly one million juvenile court cases
+    \end{quote}
+    \textbf{Analysis:} Mentions the words court and cases. Although cases can be attributed to different meanings.
+
+    \item \textbf{Class 2}: Sports\\
+    \textbf{Title:} Lindsey Vonn Wins Bronze In What's Likely Her Last Olympic
+    Downhill Race\\
+    \textbf{Description:}
+    \begin{quote}
+        \small
+        "I have no regrets; I'm really happy," she said.
+    \end{quote}
+    \textbf{Analysis:} Mentions phrases such as the Olympics and bronze.
+
+    \item \textbf{Class 3}: Business\\
+    \textbf{Title:} 10 Habits of Ultra-Likeable Leaders\\
+    \textbf{Description:}
+    \begin{quote}
+        \small
+        Becoming a more likable leader is completely under your control, and it's a matter of emotional intelligence (EQ). Unlike innate, fixed characteristics, such as your intelligence (IQ), EQ is a flexible skill that you can improve with effort.
+    \end{quote}
+    \textbf{Analysis:} Mentions phrases such as leader, intelligence, skill, and other business-like phrases.
+
+    \item \textbf{Class 4}: Technology\\
+    \textbf{Title:} Apple Accelerates Development Of Its Electric Car\\
+    \textbf{Description:}
+    \begin{quote}
+        \small
+        Apple Inc. is accelerating efforts to build an electric car, designating it internally as a "committed project" and setting
+    \end{quote}
+    \textbf{Analysis:} Mentions phrases such as Apple, an electric car, and "committed project" which are all tech related words.
+
+    \item \textbf{Class 5}: Entertainment\\
+    \textbf{Title:} 5 Netflix Things To Watch If You Can't Wait For The Royal
+    Wedding\\
+    \textbf{Description:}
+    \begin{quote}
+        \small
+        If the upcoming royal wedding is very much your thing, this is for you.
+    \end{quote}
+    \textbf{Analysis:} Mentions the phrases "Netflix" and "Watch"
+\end{enumerate}
+
+Then we also wanted to check to see if there was any vocabulary in the data that could made the model predict the classes incorrectly. 
+I noticed that there was a Star Wars example classified as Technology when there were phrases mentioned like "BB-8" and droid. The Star Wars example should have been classified as Entertainment and the model may use the incorrect data to classify most Star Wars-related examples as Entertainment.
+There are also some words that have multiple meanings. For example, a bank could refer to the area near a river, or it could mean a place where people deposit money into. The model may get confused with certain important words and classify the examples incorrectly.
+
+\section{Part 2: In-Domain Performance on Dataset A}
+
+We start by comparing the performance of the multilayer perceptron (MLP) with logistic regression (LR) on Dataset A.
+The training dataset was partition using stratified sampling into $6,000$ training and $1,500$ validation examples, preserving the class distribution in both sets.
+A raw unigram TF-IDF vectorizer was fit exclusively on the training partition.
+The Title and Description fields were concatenated for each article so that both headline and contextual information were available for the models. Since LR serves as a linear baseline, whereas the MLP introduces nonlinear transformations to the TF-IDF representation, comparing the two models therefore allows us to examine whether the extra nonlinear capacity of the MLP improves in-domain classification.
+
+For the MLP, we focus on designing a stable model with sufficient capacity to capture nonlinear feature while controlling overfitting. As shown in Table \ref{table:lr_mlp_architectures}, the MLP uses two hidden layers with 128 and 64 units, respectively.
+The first hidden layer transforms the high-dimensional TF-IDF input into 128 latent features, which are further reduced to 64 featues before the final output layer.
+ReLU activations introduce nonlinearity, while dropout and L2 regularization are used to reduce overfitting.
+Both models were trained using SGD with a batch size of 32 and cross-entropy loss as an optimizing. LR used a learning rate of $0.01$ while the MLP used a learning rate of $0.024$, momentum of $0.9$, dropout rates of $0.2 \to 0.3$, and $\mathcal{L}2$ regularization (weight decay) of $10^{-3}$. Training duration was determined based on the model's validation behavior with an early-stopping patience of five epochs.
+%LR continued improving through its maximum of $50$ epochs, whereas the MLP achieved its best validation loss at epoch $11$.
+After these decisions were fixed, the vectorizer was refit on all $7,500$ examples in the Dataset A training set, and both models were re-trained using their selected training durations before a single evaluation on the 2,500-example Dataset A test set.
+
+\begin{table*}
+  \center
+  \caption{Model Configuration}
+  \label{table:lr_mlp_architectures}
+  \begin{tabular}{lccccc}
+    \hline
+    \textbf{Model} & \textbf{Architecture} & \textbf{Optimizer} & \textbf{Regularization} & \textbf{Epochs} & \textbf{Vocab. Size} \\
+    \hline
+    LR & Single Linear & SGD & None & 50 & 19,834 \\
+    MLP & $128 \to 64$ with ReLU & SGD & Dropout 0.2/0.3; weight decay 1e-3 & 11 & 19,834\\
+    \hline
+  \end{tabular}
+\end{table*}
+
+\begin{table*}
+  \centering
+  \caption{Mean In-Domain Performances of LR and MLP on Test Dataset A}
+  \label{table:lr_mlp_performance_on_tdsa}
+  \begin{tabular}{lcc}
+    \hline
+    \textbf{Model} & \textbf{Accuracy} & \textbf{Macro-F1}\\
+    \hline
+    LR & 0.5156 & 0.5171\\
+    MLP & 0.5464 & 0.5375\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+Table \ref{table:lr_mlp_performance_on_tdsa} shows that the MLP achieved an accuracy of $0.5464$ and a macro-F1 score of $0.5375$, compared with $0.5156$ accuracy and $0.5171$ macro-F1 for LR. The raw improvements are $0.0308$ in accuracy and $0.0204$ in macro-F1.
+The increase in both metrics suggests that the MLP achieved better overall predictive performance as well as improved average class-wise performance.
+Because macro-F1 accounts for equal importance to each class, its improvement cannot be attributed simply to better performance on a more frequent class. Furthermore, each class contains exactly $500$ examples in the Dataset A test set, consistent with the balanced class distribution identified during the analysis in Section \ref{section:eda}.
+
+\begin{table*}
+  \centering
+  \caption{Per-class Performances of LR and MLP on Test Dataset A}
+  \label{table:lr_mlp_per_class_performance_on_tdsa}
+  \begin{tabular}{llccc}
+    \hline
+    \textbf{Model} & \textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1}\\
+    \hline
+    LR & Politics(1) & 0.3952 & 0.4260 & 0.4100\\
+    LR & Sports(2) & 0.5596 & 0.6200 & 0.5882\\
+    LR & Business(3) & 0.5230 & 0.5000 & 0.5112\\
+    LR & Technology(4) & 0.6690 & 0.5700 & 0.6156\\
+    LR & Entertainment(5) & 0.4592 & 0.4620 & 0.4606\\
+    MLP & Politics(1) & 0.4467 & 0.3100 & 0.3660\\
+    MLP & Sports(2) & 0.5838 & 0.7800 & 0.6678\\
+    MLP & Business(3) & 0.6193 & 0.5140 & 0.5617\\
+    MLP & Technology(4) & 0.6603 & 0.6960 & 0.6777\\
+    MLP & Entertainment(5) & 0.3978 & 0.4320 & 0.4142\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+Nonetheless, as shown in Table \ref{table:lr_mlp_per_class_performance_on_tdsa}, the improvement is not uniform across all classes. The MLP increases the F1 score for Sports from $0.5882$ to $0.6678$, Business from $0.5112$ to $0.5617$ and Technology from $0.6156$ to $0.6777$. By contrast, Politics decreases form $0.4100$ to $0.3660$ and Entertainment from $0.4606$ to $0.4142$.
+The largest improvement occurs for Sports, where recall increases from $0.5700$ to $0.6960$. In contrast, the decrease in Politics F1 is largely associated with its lower recall of $0.3100$ under the MLP. These results indicate that the additional nonlinear capacity of the MLP benefits some categories but fails to identify the lexical ambiguity present across all classes.
+
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_cm_on_dsa.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure*}
+
+From the error analysis, we observe that LR misclassified $1,211$ of $2,500$ test articles, whereas the MLP misclassified $1,134$. A follow-up qualitative inspection of ten representative errors reveals four distinct patterns: Politics--Entertainment overlap, Business--Technology overlap, Sports--Entertainment overlap, and cases in which the description is usually short or poorly correlated to its corresponding category.
+
+%TABULAR: error examples%
+
+The class-wise results further show that the MLP performs most effectively on Sports and Technology, with F1 scores of $0.6678$ and $0.6777$, respectively, whereas Politics and Entertainment remain the most difficult categories.
+This pattern may be explained by overlapping vocabulary among different classes and by articles whose descriptions provide limited additional information about the article's topic.
+For example, company-related articles can contain vocabulary associated with both Business and Technology, while stories involving public figures may contain cues associated with both Politics and Entertainment. These overlaps make the class boundaries difficult to determine using lexical TF-IDF features alone.
+
+\textbf{Summary.} The MLP provides an improvement in in-domain performance over the linear baseline, with higher overall accuracy and macro-F1. However, the relatively modest increase in macro-F1 indicates that nonlinear modelling does not necessarily eliminate ambiguity between semantically overlapping classes. The class-wise and error-analysis results suggest that the remaining errors are associated with lexical overlap, weakly informative descriptions, and source-specific patterns identified during EDA.
+
+\section{Part 3: Regularization}
+
+To implement a fully functional logistic regression model, we had to test which regularization settings and which MLP settings would be most sufficient. 
+For the MLP and LR models there were regularization settings we wanted to experiment with such as the weight decay and dropout layers.
+With the settings in mind, we compared the F1 scores of the parameter adjustments we made for both LR and MLP models on validation data A.
+
+\begin{table*}
+  \centering
+  \caption{Regularization Configurations for LR and MLP}
+  \label{table:lr_mlp_regularization_configs}
+  \begin{tabular}{lccc}
+    \hline
+    \textbf{Model Name} & \textbf{Learning rate} & \textbf{$\mathcal{L}2$} & \textbf{Dropout}\\
+    \hline
+    \texttt{lr-wd0} & $10^{-2}$ & $0$ & None\\
+    \texttt{lr-wdle-5} & $10^{-2}$ & $10^{-5}$ & None\\
+    \texttt{lr-wdle-4} & $10^{-2}$ & $10^{-4}$ & None\\
+    \texttt{lr-wdle-3} & $10^{-2}$ & $10^{-3}$ & None\\
+    \texttt{mlp\_none} & $10^{-3}$ & $0$ & None\\
+    \texttt{mlp\_dropout} & $10^{-3}$ & $0$ & None\\
+    \texttt{mlp\_dropout\_wd} & $10^{-3}$ & $10^{-4}$ & None\\
+    \texttt{mlp\_strong} & $10^{-3}$ & $10^{-3}$ & None\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_variants_validation.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure*}
+
+Note that the patience parameter makes it, so a few graphs don't show the macro-F1 at certain epochs if there isn't a big enough change in validation macro-F1 score. For the MLP, the \texttt{mlp\_dropout} reached the highest macro-F1 score of $0.804$ while for LR the \texttt{lr\_wd1e-5} model reached the highest macro-F1 score of $0.81$.
+With these conclusions, we decided to select the \texttt{mlp\_dropout} and \texttt{lr\_wdle-5} models for the rest of the experiment.
+After validating which parameters worked best, we then refitted \texttt{mlp\_dropout} and \texttt{lr\_wdle5} to learn from training data A. There was a significant decrease in accuracy and macro-F1 score for Dataset A train set where the LR model had $0.5648$ and $0.5647$ respectively and the MLP model had $0.5784$ and $0.5748$. As for the Dataset B test set, the LR model achieved a $0.78$ accuracy and $0.78$ macro-F1, while the MLP model achieved a $0.79$ for accuracy and a $0.79$ for macro-F1. The model performed much better on Dataset B compared to Dataset A.
+
+\begin{table*}
+  \centering
+  \caption{Macro-F1 Scores per Model}
+  \label{table:lr_mlp_macrof1_per_settings}
+  \begin{tabular}{lcc}
+    \hline
+    \textbf{Model Name} & \textbf{Macro-F1 (A)} & \textbf{Macro-F1 (B)}\\
+    \hline
+    \texttt{lr-wd0} & $0.5599$ & $0.7864$\\
+    \texttt{lr-wdle-5} & $0.5647$ & $0.7888$\\
+    \texttt{lr-wdle-4} & $0.5626$ & $0.7597$\\
+    \texttt{lr-wdle-3} & $0.5472$ & $0.5494$\\
+    \texttt{mlp\_none} & $0.5749$ & $0.8230$\\
+    \texttt{mlp\_dropout} & $0.5749$ & $0.7941$\\
+    \texttt{mlp\_dropout\_wd} & $0.5723$ & $0.7797$\\
+    \texttt{mlp\_strong} & $0.5521$ & $0.7349$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+We also checked to see if the other model settings could produce a better macro-F1 score It turned out that the MLP settings we chose had a $10\%$ worse macro-F1 score than the \texttt{mlp\_none} settings on dataset B. It's possible that the settings we chose work best with certain types of data. For example, the best LR model for B according to micro-F1 happened to not be the best LR model for A.
+
+\begin{table*}
+  \centering
+  \caption{Accuracies and Macro-F1 Scores of the Best Models}
+  \label{table:lr_mlp_best_accu_macrof1}
+  \begin{tabular}{lcccc}
+    \hline
+    \textbf{Model Name} & \textbf{Accuracy (A)} & \textbf{Macro-F1 (A)} & \textbf{Accuracy (B)} & \textbf{Macro-F1 (B)}\\
+    \hline
+    \texttt{lr-wd0} & $0.5648$ & $0.5647$ & $0.7800$ & $0.7889$\\
+    \texttt{mlp\_none} & $0.5784$ & $0.5749$ & $0.7900$ & $0.7941$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+After selecting settings using only Dataset A's validation macro-F1, we refitted the selected LR and MLP configurations on Dataset A. We used a unigram TF-IDF vectorizer on both the title and description test from Dataset A training set only. The vectorizer was then frozen and used to experiment with Dataset A test and Dataset B test. 
+Both classifiers performed substantially better on Dataset B than on Dataset A test. Logistic regression increased from $0.5647$ macro-F1 on Dataset A to $0.7888$ on Dataset B. The MLP increased from $0.5749$ to $0.7941$ macro-F1. The MLP performed slightly better than logistic regression on both Dataset A and Dataset B, although the difference was small.
+We then tried to compare performance according to the classes that were determined. Table \ref{table:lr_mlp_a_and_b_f1_precision_recall} were the results.
+
+\begin{table*}
+  \centering
+  \caption{Accuracies and Macro-F1 Scores of the Best Models}
+  \label{table:lr_mlp_a_and_b_f1_precision_recall}
+  \begin{tabular}{llcccc}
+    \hline
+    \textbf{Model} & \textbf{Class} & \textbf{F1 (A)} & \textbf{Precision (B)} & \textbf{Recall (B)} & \textbf{F1 (B)}\\
+    \hline
+    LR & Politics & $0.379$ & $0.938$ & $0.542$ & $0.687$\\
+    LR & Sports & $0.658$ & $0.982$ & $0.871$ & $0.923$\\
+    LR & Business & $0.587$ & $0.527$ & $0.990$ & $0.688$\\
+    LR & Technology & $0.683$ & $0.981$ & $0.643$ & $0.777$\\
+    LR & Entertainment & $0.517$ & $0.977$ & $0.782$ & $0.869$\\
+    MLP & Politics & $0.388$ & $0.874$ & $0.468$ & $0.609$\\
+    MLP & Sports & $0.681$ & $0.983$ & $0.896$ & $0.938$\\
+    MLP & Business & $0.580$ & $0.556$ & $0.986$ & $0.711$\\
+    MLP & Technology & $0.702$ & $0.931$ & $0.746$ & $0.828$\\
+    MLP & Entertainment & $0.523$ & $0.990$ & $0.798$ & $0.884$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+\begin{figure*}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_part3_cm.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure*}
+
+Sports did the best for both models. The MLP obtained a macro-F1 of 0.938 on Sports for Data B and LR obtained 0.923. Entertainment and Technology also worked well with both models. Politics remained to be the most difficult category on Data B when it came to F1 and recall.  Then for Business both precision and Data A/B's macro-F1 score were extremely low. This means that the model recognized most Business articles but somehow incorrectly assigned the Business label to articles from other classes.
+It's possible that the class names had different writing styles which led to different ways of classification. For example, Sports would have explicit terms like team names or cities which makes it easier to classify compared to trying to differentiate between Business, Politics, and Entertainment. There was an example involving Star Wars that was labeled as Technology in the raw data when it should've been labeled as Entertainment. Class balance might make it such that the data is able to learn more about one class than another, but the data had an almost even number of examples for each class. Greater text length also gives more information for the model to learn from.
+When comparing regularization settings, there didn't seem to be much change. For logistic regression, the L2 regularization with a weight decay of $10^{-5}$ had the best Data B macro-F1 among the other settings at $0.7888$ however the weight decay of $10^{-4}$ decreased Dataset B's macro-F1 to only $0.7597$ and the stronger regularization decreased it to $0.5494$. It seems like weaker regularization made the model better.
+As for the MLP, the moderate dropout model achieved a Data B macro-F1 of $0.7941$. However, the MLP without regularization achieved a higher Dataset B macro-F1 of $0.823$. Then adding dropout and L2 weight decay reduce Dataset B's macro-F1 to $0.7797$ while strong dropout and stronger L2 regularization reduced the macro-F1 to $0.7349$. Therefore, the results don't support the idea that stronger regularization improves the transfer to the Dataset B test set and Dataset A test set. 
+Table \ref{table:final_config_for_lr_mlp} shows the final LR and MLP models that were chosen since they both achieved the highest macro-F1.
+
+\begin{table*}
+  \centering
+  \caption{Final Configurations for LR and MLP}
+  \label{table:final_config_for_lr_mlp}
+  \begin{tabular}{llccccc}
+    \hline
+    \textbf{Model} & \textbf{Model Name} & \textbf{Macro-F1 (A)} & \textbf{Best Epoch} & \textbf{Learning rate} & \textbf{L2} & \textbf{Dropout}\\
+    \hline
+    LR & \texttt{Lr-wdle-5} & $0.8013$ & $6$ & $10^{-2}$ & $10^{-5}$ & None\\
+    MLP & \texttt{Mlp\_dropout} & $0.8045$ & $2$ & $10^{-3}$ & $0$ & None\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+\section{Part 4: Cross-Dataset Transfer to Dataset C}
+
+We applied two frozen Part 3 models directly to Data C testing set, which has 2,000 articles of which 500 are in each of labels 1 through 4 evenly. The Part 3 TF-IDF vectorizer was only used with transform, so Data C articles are being represented using the Data A vocabulary that has 19,834 terms and neither model was retrained. As an in-domain reference, we trained separate models on the Data C training set but they were never combined with the transferred models. We also checked to ensure no Data C test set articles were identical to any of the Data A train set articles nor Data C train set articles and the check showed that there were indeed no overlapping articles. The first model we used is the logistic regression model with a single linear layer with 5 outputs trained at learning rate 0.01, weight decay 1e-5 and batch size 64 for 6 epochs. The second is the MLP with two hidden layers of 128 and 64 units with ReLU activations and dropout of 0.2 and 0.3 and trained with a learning rate 0.001 with no weight decay and batch size 64 for 2 epochs. Both of these models were trained on all 7,500 articles in Data A training set with seed 0.
+
+For the labels, sports, business, and technology mean the same thing in Data A and Data C so we analyzed the 1,500 test articles with true labels of 2, 3, and 4. We computed macro-F1 for those three labels where a prediction of 1 or 5 counted as an error. LR reached 0.587 accuracy and 0.629 macro-F1. The MLP reached 0.599 accuracy and 0.638 macro-F1. By analyzing the results, sports transferred well with an F1 of 0.812 on LR and 0.819 on MLP. This is likely because the vocabulary of team names and scores are distinct compared to the other categories. Business and Technology on the other hand were much weaker with F1 between 0.46 and 0.48. This first figure shows that they are confused with each other far more than with any other class. LR labelled 138 Business articles as Technology and 165 Technology articles as Business. The MLP did the same with 156 and 171. Data C business and technology new share a lot of company and market vocabulary that Data A didn't separate well.
+
+If we compare this to Data B, the shared label transfer to Data C is weaker than Data B in part 3 which had a macro-F1 of 0.79. It was also interesting to see that categories with the same meaning still lost accuracy as the source and writing style changed.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_a_to_c.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_tran_c_to_c.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure}
+
+Comparing Data A and Data C, the semantic transfer of label 1 changed from Politics in Data A to the broader category World. LR precision became 0.592, recall became 0.430, and F1 became 0.498. Similarly, MLP precision became 0.607, recall became 0.392, and F1 became 0.476. From the 500 true World articles, LR predicted 215 as label 1 and MLP predicted 196. From the plots, whenever World articles were missed, they were often mistaken as Business. LR also labelled 148 non-world articles as World and MLP did that for 127.
+Label 5 doesn't exist in Data C, so every prediction for that label is wrong. LR made that error for 139 articles and MLP did that for 110 articles. Often it pushed articles about culture, religion, and other stories into entertainment. LR and MLP misclassifications of World articles fell into six groups: foreign conflict and politics, sports/noise, international economics, disasters and society, culture and religion, and a single example of a misclassified tech article. The most common words absent from Data A that led to missed classifications primarily came from terminology about countries like EU, India, and Nigeria or economic terms like prices and crude oil, as well as some international sports terminologies like Olympics and games. This highlights that Data A primarily had articles on US based politics rather than international politics. We also noticed that terms like "afp" and "quot" showed formatting differences between the datasets.
+As an in-domain reference, our models were trained on Data C with the same Part 3 settings of an 80/20 split of the data, TF-IDF vectorizer on 17303 terms rather than the original 19834 terms, and early epoch stopping on the macro-F1 validations. These models were trained on Data C testing set and as a result never predicted label 5 as they were never exposed to that label in training. This change allowed us to see the true impact of changing label 1 from Politics to World resulting in a F1 of 0.379 for LR and 0.388 for MLP.
+
+\begin{table*}
+  \centering
+  \caption{Per-class Performances of LR and MLP on Test Dataset A}
+  \label{table:lr_mlp_tran_ref_metrics}
+  \begin{tabular}{lcccc}
+    \hline
+    \textbf{Model} & \textbf{Source} & \textbf{Label 1 Recall} & \textbf{Label 1 F1} & \textbf{Label 1--4 Macro-F1}\\
+    \hline
+    LR & Trained on A (Transfer) & 0.430 & 0.4983 & 0.5608\\
+    LR & Trained on C (Reference) & 0.560 & 0.6080 & 0.6316\\
+    MLP & Trained on A (Transfer) & 0.392 & 0.4763 & 0.5597\\
+    MLP & Trained on C (Reference) & 0.580 & 0.6257 & 0.6409\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+Table \ref{table:lr_mlp_tran_ref_metrics} shows the results of the reference models on Data C testing set comparing whether it was trained on the Data A training set or the Data C training set. From this data, we can see that World F1 scores grew by 11 points  for LR and 15 points for MLP showing our estimated tradeoff for Politics and World mismatches in the data. However, there are still challenges with labelling World articles as the topic in Data C is so broad that many of the other articles have overlapping terminology.
+We can conclude from Part 4 that because LR and MLP stay within a few points of each other in every comparison, the nonlinear model doesn't help with category boundaries which makes sense as it hadn't seen that specific category during training.
+
+
+\section{Part 5: Limited-Data Adaptation to Dataset C}
+
+\section{Part 6: Text-Representation Extension}
+
+In the previous sections, we analyzed the performance of different models using datasets represented with unigram TF-IDF features. In this section, we extend the text representation by using bigrams in addition to unigrams and examine how the resulting increase in feature dimensionality affects model performance. The experiments are designed to answer the following questions: (a) How do the models respond to the increased feature dimensionality introduced by bigram features? (b) Does the unigram--bigram representation improve both in-domain performance and cross-dataset transfer compared with the unigram baseline? and (c) Does the extended representation improve model adaptation to Dataset C when limited target-domain training examples are added?
+
+\begin{table*}
+  \centering
+  \caption{Vocabulary Sizes in Different Text Representation Policy}
+  \label{table:feature_sizes_uni_bigrams}
+  \begin{tabular}{lcc}
+    \hline
+    \textbf{Representation} & \textbf{Split vocabulary} & \textbf{Full-training vocabularly}\\
+    \hline
+    Unigram TF-IDF & $17,857$ & $19,834$\\
+    Unigram + bigram & $25,465$ & $31,068$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+As shown in Table \ref{table:feature_sizes_uni_bigrams}, the unigram produces a vocabulary of $19,834$ features when fitted on the full Dataset A training set. By using both unigrams and bigrams with \texttt{min\_df=2}, the vocabulary increases to $31,068$ features, corresponding to an increase of approximately $56.64\%$.
+Bigrams allow the representation to preserve short two-word pairs that may carry more specific semantic information than individual words. For example, phrases such as "prime minister" or "stock market" may provide stronger class-related information than the individual terms considered separately.
+Note that the extension changes only the text representation; the data splits, random seed, model hyperparameters, and evaluation metrics remain unchanged. This controlled comparison isolates the effect of feature representation as far as possible. The final LR configuration uses unigram--bigram TF-IDF with \texttt{min\_df=2}, Adam, learning rate of $0.01$, $\mathcal{L}2$ regularization of $10^{-5}$, epochs of $11$, and batch size of $64$. The final MLP uses $128 \to 64$ ReLU hidden units and dropout layers with the rates of $0.2 \to 0.3$, Adam with learning rate of $0.001$, epochs of $8$, and batch size of $64$. After refitting on all $7,500$ Dataset A training set, both models run on a $31,068$ vocabularies.
+%However, the larger feature space may also introduce source-specific phrases that occur frequently in one dataset but do not generalize to another. Therefore, an increase in feature dimensionality does not necessarily guarantee improved classification or transfer performance.
+
+We first compare the extended models with their unigram counterparts on Datasets A and B to examine in-domain and cross-source performance. We then repeat the limited-data adaptation experiments on Dataset C to determine whether the additional phrase-level features improve adaptation under World-only, shared-label-only, and balanced sampling strategies.
+
+\begin{table*}
+  \centering
+  \caption{Vocabulary Sizes in Different Text Representation Policy}
+  \label{table:feature_sizes_uni_bigrams}
+  \begin{tabular}{lcccc}
+    \hline
+    \textbf{Model} & \textbf{Accuracy on Dataset A} & \textbf{Macro-F1 on Dataset A} & \textbf{Accuracy on Dataset B} & \textbf{Macro-F1 on Dataset B} \\
+    \hline
+    Unigram LR & $.5648$ & $.5647$ & $.7802$ & $.7888$\\
+    Bigram LR & $.5672$ & $.5667$ & $.7146$ & $.7255$\\
+    Unigram MLP & $.5784$ & $.5749$ & $.7924$ & $.7941$\\
+    Bigram MLP & $.5720$ & $.5715$ & $.7924$ & $.7988$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+On Dataset A test set, LR macro-F1 increases from $0.5647$ to $0.5667$, while MLP macro-F1 decreases from $0.5749$ to $0.5715$. The cross-source Dataset B results are more informative. LR macro-F1 falls from $0.788$ to $0.7255$ ($-0.0633$), whereas the MLP increases slightly from $0.7941$ to $0.7988$ ($+0.0047$). Therefore, the larger feature space does not necessarily produce a consistent transfer across different models.
+
+\begin{table*}
+  \centering
+  \caption{Vocabulary Sizes in Different Text Representation Policy}
+  \label{table:lr_mlp_extension_perclass_performance}
+  \begin{tabular}{llcccccc}
+    \hline
+    \textbf{Model} & \textbf{Class} & \textbf{Precision (A)} & \textbf{Recall (A)} & \textbf{F1 (A)} & \textbf{Precision (B)} & \textbf{Recall (B)} & \textbf{F1 (B)} \\
+    \hline
+    Bigram LR & Politics & $.395$ & $.396$ & $.396$ & $.917$ & $.480$ & $.630$\\
+    Bigram LR & Sports & $.645$ & $.670$ & $.658$ & $.976$ & $.787$ & $.871$\\
+    Bigram LR & Business & $.582$ & $.554$ & $.568$ & $.459$ & $.990$ & $.627$\\
+    Bigram LR & Technology & $.676$ & $.688$ & $.682$ & $.976$ & $.509$ & $.669$\\
+    Bigram LR & Entertainment & $.533$ & $.528$ & $.531$ & $.976$ & $.723$ & $.830$\\
+    MLP LR & Politics & $.388$ & $.384$ & $.386$ & $.934$ & $.542$ & $.686$\\
+    MLP LR & Sports & $.673$ & $.686$ & $.679$ & $.978$ & $.885$ & $.929$\\
+    MLP LR & Business & $.577$ & $.548$ & $.562$ & $.546$ & $.984$ & $.703$\\
+    MLP LR & Technology & $.673$ & $.680$ & $.677$ & $.968$ & $.668$ & $.791$\\
+    MLP LR & Entertainment & $.546$ & $.562$ & $.554$ & $.969$ & $.816$ & $.886$\\
+    \hline  
+  \end{tabular}
+\end{table*}
+
+The class-wise results further illustrate this difference. In Table \ref{table:lr_mlp_extension_perclass_performance}, F1 score of LR decreases fro all five classes after adding bigrams, with the largest reduction occurring for Technology ($0.777 \to 0.669$). For the MLP, Politics improves from $0.6094$ to $0.686$ and Entertainment changes only slightly from $0.884$ to $0.886$, while Sports, Business and Technology decline. These changes suggest that proximity-token features can be informative for particular categories without being uniformly transferable across the full label set.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_cm.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure}
+
+The confusion matrices provide a concrete explanation for the mixed transfer effects. The extended LR produces additional false Business predictions on Dataset B, including Politics--Business, Sports--Business, and Technology--Business errors. This is consistent with the possibility that some two-word pairs associated with Business in Dataset A are also present in other categories from Dataset B. In contrast, the MLP can combine unigram and bigram evidence nonlinearly and obtains a small improvement, although that improvement is not shared by every class. The extension therefore changes the error structure rather than simply increasing or decreasing performance uniformly.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=16cm,trim={0 0 0 0},clip]{fig_lr_mlp_extension_f1s.png}
+  \caption{Confusion matrices on Test Dataset A}
+\end{figure}
 
 \section{Conclusion}
 
-pong
+In this work, we systematically analyzed the generalization and adaptation performance of custom MLP models under different settings and hyperparameters. Our experiments demonstrated the MLP's generalization ability in three different settings: in-domain performance on Dataset A was limited by topical overlap and source-specific patterns; cross-source transfer to Dataset B achieved strong overall performance while exhibiting noticeable changes in class-wise precision and recall; and the semantic category shift in Dataset C revealed limitations in transferring a decision boundary to a dataset with a different class composition.
+The adaptation experiments provided the clearest evidence of the effects of category mismatch. World-only sampling increases World recall but reduces performance on the remaining classes, whereas shared-label-only sampling improves performance on non-World classes at the expense of World recall. Balanced sampling mitigates both effects by adding World examples along with examples from the other classes, helping the model classify World while preserving its ability to distinguish among the remaining categories.
+In a further analysis, we showed that increasing feature dimensionality does not necessarily improve transfer performance. Using bigrams increases the full-training vocabulary size by 56.64\% but generates inconsistency in performance improvements before adaptation to Dataset C and, overall, underperform the corresponding unigram models. Based on these results, we conclude that unigram TF-IDF provides the more effective and consistent text representation for the final models.
+
 
 \end{document}
