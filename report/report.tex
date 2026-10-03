@@ -138,14 +138,14 @@ After these decisions were fixed, the vectorizer was refit on all $7,500$ exampl
 
 \begin{table*}
   \center
-  \caption{Model Configuration}
+  \caption{Initial Configurations for LR and MLP}
   \label{table:lr_mlp_architectures}
   \begin{tabular}{lccccc}
     \hline
     \textbf{Model} & \textbf{Architecture} & \textbf{Optimizer} & \textbf{Regularization} & \textbf{Epochs} & \textbf{Vocab. Size} \\
     \hline
     LR & Single Linear & SGD & None & 50 & 19,834 \\
-    MLP & $128 \to 64$ with ReLU & SGD & Dropout 0.2/0.3; weight decay 1e-3 & 11 & 19,834\\
+    MLP & $128 \to 64$ with ReLU & SGD & Dropout 0.2/0.3; $\mathcal{L}2=10^{-3}$ & 11 & 19,834\\
     \hline
   \end{tabular}
 \end{table*}
